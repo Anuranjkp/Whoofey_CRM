@@ -1,12 +1,18 @@
 var express = require("express");
 var router = express.Router();
+
+//Databse models
 var userModel = require("../db_models/userModel");
+var clientModel = require("../db_models/clientModel")
+
 var bcrypt = require("bcrypt");
 var objectId = require("mongodb").ObjectId
+var validation = require("../security/validation")
 
 /* GET home page. */
-router.get("/", function (req, res, next) {
-  res.render("index", { title: "Express" });
+router.get("/",  validation.userLogValidation,(req, res, next)=>{
+  let user = req.session.user
+  res.render("home", {user})
 });
 
 
@@ -37,9 +43,11 @@ router.post("/signup", async (req, res) => {
   try {
     //uploading data to db
     const userToDb = await user.save();
-    res.status(201).json({
-      message: userToDb,
-    });
+    //assign session
+    req.session.loggedIn = true;
+    req.session.user = userToDb
+    console.log(req.session.user)
+    res.redirect('/')
   } catch (err) {
     res.status(400).json({
       message: err.message,
@@ -49,7 +57,6 @@ router.post("/signup", async (req, res) => {
 
 //signin get request
 router.get("/signin", (req, res, next) => {
-  console.log("rendering signin page")
   res.render("signin");
 });
 
@@ -70,10 +77,11 @@ router.post("/signin", async (req, res) => {
     const userPassword = await bcrypt.compare(loginPassword, userInfo.passwd).then((passwordStatus) => {
         //authentication success password and email matched
         if (passwordStatus) {
-          res.status(201).json({
-            message: "login sucessfull",
-            data: userInfo,
-          });
+          //assign session
+          req.session.loggedIn = true;
+          req.session.user = userInfo
+          console.log("logged in")
+          res.redirect('/')
         } else {
           //password not matched or entered incorrect
           res.status(500).json({ message: "incorrect password" });
@@ -159,5 +167,42 @@ router.post('/userProfile/deleteAccount6ty5', (req,res)=>{
 });
 
 
+//add new client
+router.get('/addNewClient', validation.userLogValidation,(req,res)=>{
+  res.render("addNewClient")
+})
 
+router.post('/addNewClient', validation.userLogValidation ,async(req,res)=>{
+  let clientName = req.body.clientName;
+  let displayName = req.body.displayName;
+  let phone = req.body.phone;
+  let whatsappNumber = req.body.whatsappNumber;
+  let clientMail = req.body.clientMail;
+
+
+
+  let user = req.session.user
+
+
+  let client = new clientModel({
+    clientName:clientName,
+    displayName:displayName,
+    phone:phone,
+    whatsappNumber:whatsappNumber,
+    clientMail:clientMail,
+    addedBy: user._id
+  })
+
+  try {
+    //uploading client to db
+    const clientToDb = await client.save();
+    console.log("client added successfuly")
+    res.redirect('/')
+  } catch (err) {
+    res.status(400).json({
+      message: err.message,
+    });
+  }
+
+})
 module.exports = router; 
