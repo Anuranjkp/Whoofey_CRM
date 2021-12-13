@@ -95,7 +95,9 @@ router.get('/userProfile/:id', (req,res)=>{
   let userId = req.params.id;
   let userData = userModel.findById(userId).then((data)=>{
     console.log(data)
-    res.render('view-profile', {data})
+    res.status(201).json({
+      user: data
+    })
   })
 })
 
@@ -193,7 +195,7 @@ router.post('/addNewClient', validation.userLogValidation ,async(req,res)=>{
     addedBy: user._id
   })
 
-  try {
+  try { 
     //uploading client to db
     const clientToDb = await client.save();
     console.log("client added successfuly")
@@ -205,4 +207,76 @@ router.post('/addNewClient', validation.userLogValidation ,async(req,res)=>{
   }
 
 })
+
+// remove clients
+router.post('/removeClient', (req,res)=>{
+  let clientId = req.query.id
+  console.log(clientId)
+
+  const client = clientModel.findById(clientId).then(async(removeClient)=>{
+    console.log(removeClient)
+      if(!removeClient){
+          res.status(501).json({
+              message:"post not found"
+          })
+      }
+      return await clientModel.deleteOne(objectId(removeClient));
+
+  }).then((clientDeleted)=>{
+      res.status(200).json({
+          message:"account deleted successfully",
+          account: clientDeleted
+      })
+  }).catch((err)=>{
+      console.log(err) 
+  })
+})
+
+
+
+router.get('/editClientDetails', (req,res)=>{
+  let clientId = req.query.id
+  console.log(clientId)
+  let client = clientModel.findById(clientId).then((clientDetails)=>{
+    res.status(201).json({
+      clientDetails: clientDetails
+    })
+  })
+})
+
+
+router.post('/editClient', (req,res)=>{
+  let clientId = req.query.id;
+  console.log(clientId)
+  const clientName = req.body.clientName;
+  const displayName = req.body.displayName;
+  const phone = req.body.phone;
+  const whatsappNumber = req.body.whatsappNumber;
+  const clientMail = req.body.clientMail;
+  console.log(clientName)
+  const clientData = clientModel.findById(clientId).then((client)=>{
+      if(!client){
+          res.status(501).json({
+              message:"post is not available"
+          })
+      }//checking id exist
+
+      client.clientName = clientName; 
+      client.displayName = displayName;
+      client.phone = phone;  
+      client.whatsappNumber = whatsappNumber;  
+      client.clientMail = clientMail;  
+      return client.save();   //saving changes to databse
+  }).then((result)=>{
+      res.status(200).json({
+          message:"client details updated",
+          data: result
+      })
+  }).catch((err)=>{
+      console.log(err)
+  })
+})
+
+
+
 module.exports = router; 
